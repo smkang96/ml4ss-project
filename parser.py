@@ -1,9 +1,10 @@
 
 import time
-# import cPickle as pickle
+import _pickle as pickle
 import datetime
 import argparse
-# from tqdm import tqdm
+from multiprocessing import Pool
+from tqdm import tqdm
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -38,7 +39,7 @@ def parse_date(string):
 
 	return date_and_time
 
-def get_reactions(href):
+def get_reactions(driver, href):
 	driver.get(href)
 	reactions = driver.find_element_by_class_name("scrollAreaColumn").find_elements_by_class_name("_10tn")
 
@@ -72,18 +73,18 @@ def get_reactions(href):
 
 	return like, haha, love, sad, wow, angry
 
-def get_post(href):
+def get_post(driver, href):
 	driver.get(href)
 
 	text = driver.find_element_by_class_name("_5rgt").text
 	date = parse_date(driver.find_element_by_class_name("_52jc").find_element(By.TAG_NAME, "abbr").text)
 
 	href_reactions = driver.find_element_by_class_name("_5ton").find_element(By.TAG_NAME, "a").get_attribute("href")
-	reactions = get_reactions(href_reactions)
+	reactions = get_reactions(driver, href_reactions)
 
 	return Post(href, date, text, *reactions)
 
-def get_comments(post):
+def get_comments(driver, post):
 	driver.get(post.href)
 
 	try:
@@ -111,20 +112,20 @@ def get_comments(post):
 
 	for t in tuples:
 		if t[2]:
-			reactions = get_reactions(t[2])
+			reactions = get_reactions(driver, t[2])
 		else:
 			reactions = 0, 0, 0, 0, 0, 0
 
 		comment = Comment(t[0], *reactions)
 
 		if t[1]:
-			get_replies(comment, t[1])
+			get_replies(driver, comment, t[1])
 
 		post.add_comment(comment)
 
 	return post
 
-def get_replies(comment, href):
+def get_replies(driver, comment, href):
 	driver.get(href)
 
 	tuples = []
@@ -143,7 +144,7 @@ def get_replies(comment, href):
 
 	for t in tuples:
 		if t[1]:
-			reactions = get_reactions(t[1])
+			reactions = get_reactions(driver, t[1])
 		else:
 			reactions = 0, 0, 0, 0, 0, 0
 
@@ -152,7 +153,46 @@ def get_replies(comment, href):
 
 	return comment
 
+def parse(ranges):
+	start, end = ranges
+
+	driver = webdriver.Chrome()
+	driver.get("https://mobile.facebook.com/")
+	id_input = driver.find_element_by_id("m_login_email")
+	pw_input = driver.find_element_by_id("m_login_password")
+
+	id_input.send_keys(my_id)
+	pw_input.send_keys(my_pw)
+	pw_input.send_keys(Keys.RETURN)
+	time.sleep(4)
+
+	posts = []
+	completed, total = 0, end-start
+
+	for line in tqdm(links[start:end], total=total):
+		href_post = line.strip()
+		try:
+			try:
+				post = get_post(driver, href_post)
+			except NoSuchElementException as e:
+				print("{} {}".format(href_post, "photo"))
+				continue
+
+			get_comments(driver, post)
+		except Exception as e:
+			print("{} {}".format(href_post, str(e)))
+			continue
+
+		posts.append(post)
+		completed += 1
+
+	pickle.dump(posts, open("data/{}-{}.pkl".format(start, end), "wb+"))
+
+	return completed
+
 if __name__ == '__main__':
+	START = time.time()
+
 	args = parse_arguments()
 
 	if not args.test and not args.f:
@@ -160,10 +200,20 @@ if __name__ == '__main__':
 
 	if args.test:
 		# Test code
+		driver = webdriver.Chrome()
+		driver.get("https://mobile.facebook.com/")
+		id_input = driver.find_element_by_id("m_login_email")
+		pw_input = driver.find_element_by_id("m_login_password")
+
+		id_input.send_keys(my_id)
+		pw_input.send_keys(my_pw)
+		pw_input.send_keys(Keys.RETURN)
+		time.sleep(3)
+
 		href = "https://mobile.facebook.com/story.php?story_fbid=2276312152687495&id=1384103428575043"
 
-		post = get_post(href)
-		get_comments(post)
+		post = get_post(driver, href)
+		get_comments(driver, post)
 
 		# print(post)
 		# for comment in post.comments:
@@ -177,39 +227,25 @@ if __name__ == '__main__':
 		my_id = cred_file.readline().strip()
 		my_pw = cred_file.readline().strip()
 
-	driver = webdriver.Chrome()
-	driver.get("https://mobile.facebook.com/")
-	id_input = driver.find_element_by_id("m_login_email")
-	pw_input = driver.find_element_by_id("m_login_password")
-
-	id_input.send_keys(my_id)
-	pw_input.send_keys(my_pw)
-	pw_input.send_keys(Keys.RETURN)
-	time.sleep(3)
-
-	with open(args.f, "r") as file, open("log.txt", "w+") as log:
-		posts = []
-		count, limit = 0, 23800 // 10
-
+	links = []
+	with open(args.f, "r") as file:
 		for line in file:
-			href_post = line.strip()
-			try:
-				try:
-					post = get_post(href_post)
-				except NoSuchElementException as e:
-					log.write("{} {}".format(href_post, "photo"))
-					print(href_post, "photo")
-					continue
+			links.append(line.strip())
 
-				get_comments(post)
-			except Exception as e:
-				log.write("{} {}".format(href_post, str(e)))
-				continue
+	total, cores = len(links), 4
 
-			posts.append(post)
-			count += 1
+	pool = Pool(cores)
+	ranges = [(i * total//cores, (i+1) * total//cores) for i in range(cores)]
 
-			if len(posts) >= limit:
-				# pickle.dump(posts, open("{}.pkl".format(str(count // limit))))
-				posts = []
+	completed = 0
+	for c in pool.map(parse, ranges):
+		completed += c
+
+	END = time.time()
+
+	print("Completed {}/{} ({}%) in {} seconds." \
+		.format(completed, total, completed/total*100, END-START))
+
+
+	
 
