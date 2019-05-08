@@ -1,4 +1,5 @@
 
+import sys
 import time
 import _pickle as pickle
 import datetime
@@ -88,8 +89,10 @@ def get_comments(driver, post):
 	driver.get(post.href)
 
 	try:
-		comments = driver.find_element_by_class_name("_333v").find_elements_by_xpath("./div[contains(@class, '_2a_i')")
+		# comments = driver.find_element_by_class_name("_333v").find_elements_by_xpath("./div[contains(@class, '_2a_i')")
+		comments = driver.find_element_by_class_name("_333v").find_elements_by_css_selector("[data-sigil='comment']")
 	except NoSuchElementException:
+		print("NoSuchElementException")
 		return post
 
 	tuples = []
@@ -186,7 +189,7 @@ def parse(ranges):
 		posts.append(post)
 		completed += 1
 
-	pickle.dump(posts, open("data/{}-{}.pkl".format(start, end), "wb+"))
+	pickle.dump(posts, open("data/{}-{}.pkl".format(start, end-1), "wb+"))
 
 	return completed
 
@@ -197,6 +200,10 @@ if __name__ == '__main__':
 
 	if not args.test and not args.f:
 		raise AssertionError("Invalid CLI")
+
+	with open("credentials.txt", "r") as cred_file:
+		my_id = cred_file.readline().strip()
+		my_pw = cred_file.readline().strip()
 
 	if args.test:
 		# Test code
@@ -215,6 +222,12 @@ if __name__ == '__main__':
 		post = get_post(driver, href)
 		get_comments(driver, post)
 
+		pickle.dump(post, open("test.pkl", "wb+"))
+		test_post = pickle.load(open("test.pkl", "rb"))
+
+		print(test_post.comments)
+		print(test_post.comments[3].replies)
+
 		# print(post)
 		# for comment in post.comments:
 		# 	print("  {}".format(str(comment)))
@@ -223,16 +236,12 @@ if __name__ == '__main__':
 
 		sys.exit(0)
 
-	with open("credentials.txt", "r") as cred_file:
-		my_id = cred_file.readline().strip()
-		my_pw = cred_file.readline().strip()
-
 	links = []
 	with open(args.f, "r") as file:
 		for line in file:
 			links.append(line.strip())
 
-	total, cores = len(links), 4
+	total, cores = len(links), 6
 
 	pool = Pool(cores)
 	ranges = [(i * total//cores, (i+1) * total//cores) for i in range(cores)]

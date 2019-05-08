@@ -67,7 +67,7 @@ class Post:
 		count = len(self.comments)
 
 		return "<POST({}) text={} date={} like={} haha={} love={} sad={} wow={} angry={}>"\
-				.format(count, short, date, self.like, self.haha, self.love, self.sad, self.wow, self.angry)
+				.format(count, short, self.date, self.like, self.haha, self.love, self.sad, self.wow, self.angry)
 
 	def __repr__(self):
 		return self.__str__()
