@@ -31,25 +31,25 @@ def preprocess(index, data):
 	save = []
 
 	for p, post in tqdm(enumerate(data), total=len(data)):
-		if len(post.comments) == 0: continue
-
 		title, body, categories = clean_post(post.text)
 
 		title_pos, body_pos = posify(title), posify(body)
-		pp = POSPost(title_pos, body_pos, categories)
+		pp = POSPost(title, body, title_pos, body_pos, categories)
 
 		for comment in post.comments:
 			comment_pos = posify(comment.text)
-			cp = POSComment(comment_pos)
+			cp = POSComment(comment.text, comment_pos)
 
 			for reply in comment.replies:
 				reply_pos = posify(reply.text)
-				rp = POSComment(reply_pos)
+				rp = POSComment(reply.text, reply_pos)
 				cp.add_comment(rp)
 
 			pp.add_comment(cp)
 
 		save.append(pp)
+
+	pickle.dump(save, open("data/v2-{}".format(index), "wb+"))
 
 		# print(post.text)
 		# print(pp)
@@ -61,14 +61,13 @@ def preprocess(index, data):
 		# 		print("    " + str(post.comments[i].replies[j]))
 		# 		print("    " + str(pp.comments[i].comments[j]))
 
-	pickle.dump(save, open("data/v2-{}".format(index), "wb+"))
-
 if __name__ == '__main__':
-	d1 = pickle.load(open("data/v1-0", "rb"))
-	d2 = pickle.load(open("data/v1-1", "rb"))
-	d3 = pickle.load(open("data/v1-2", "rb"))
-	d4 = pickle.load(open("data/v1-3", "rb"))
-	datas = [d1, d2, d3, d4]
+	N = 6
+	datas = []
+
+	for i in range(N):
+		d = pickle.load(open("data/v1-{}".format(i), "rb"))
+		datas.append(d)
 
 	okt = Okt()
 
