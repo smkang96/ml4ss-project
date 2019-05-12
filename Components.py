@@ -77,3 +77,28 @@ class Post:
 
 	def get_reactions(self):
 		return self.like + self.haha + self.love + self.sad + self.wow + self.angry
+
+class POSPost:
+	def __init__(self, title_pos, body_pos, categories):
+		self.title_pos = title_pos
+		self.body_pos = body_pos
+		self.categories = categories
+		self.comments = []
+
+	def add_comment(self, comment):
+		self.comments.append(comment)
+
+	def __str__(self):
+		return "<POSPost({}) {}..., {}...>".format(len(self.comments),  str(self.title_pos)[:10], str(self.body_pos)[:10])
+
+class POSComment:
+	def __init__(self, text_pos):
+		self.text_pos = text_pos
+		self.comments = []
+
+	def add_comment(self, comment):
+		self.comments.append(comment)
+
+	def __str__(self):
+		return "<POSPost({}) {}...>".format(len(self.comments), str(self.text_pos)[:10])
+
