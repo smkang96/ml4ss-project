@@ -79,11 +79,13 @@ class Post:
 		return self.like + self.haha + self.love + self.sad + self.wow + self.angry
 
 class POSPost:
-	def __init__(self, title, body, title_pos, body_pos, categories):
+	def __init__(self, title, body, title_pos, title_pos_filtered, body_pos, body_pos_filtered, categories):
 		self.title = title
 		self.body = body
 		self.title_pos = title_pos
+		self.title_pos_filtered = title_pos_filtered
 		self.body_pos = body_pos
+		self.body_pos_filtered = body_pos_filtered
 		self.categories = categories
 		self.comments = []
 
@@ -94,9 +96,10 @@ class POSPost:
 		return "<POSPost({}) {}..., {}...>".format(len(self.comments),  str(self.title_pos)[:10], str(self.body_pos)[:10])
 
 class POSComment:
-	def __init__(self, text, text_pos):
+	def __init__(self, text, text_pos, text_pos_filtered):
 		self.text = text
 		self.text_pos = text_pos
+		self.text_pos_filtered = text_pos_filtered
 		self.comments = []
 
 	def add_comment(self, comment):
