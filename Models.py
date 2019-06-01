@@ -40,7 +40,7 @@ class MyTfidf:
 		self.model = TfidfModel(self.myDictionary.doc2bows, smartirs=smartirs)
 		self.vectors = None
 		self.clustering = None
-		self.cluster2id = None
+		self.cluster2ids = None
 		self.id2cluster = None
 		print("- Created MyTfidf (smartirs={})".format(smartirs))
 
@@ -68,7 +68,7 @@ class MyTfidf:
 		return vectors
 
 	def cluster(self, n_clusters, add_date=False, v1=None, min_value=0):
-		if self.clustering and self.cluster2id and self.id2cluster \
+		if self.clustering and self.cluster2ids and self.id2cluster \
 			and len(self.clustering.cluster_centers_) == n_clusters:
 			return
 		
@@ -84,20 +84,20 @@ class MyTfidf:
 		self.clustering = MiniBatchKMeans(n_clusters=n_clusters)
 		self.clustering.fit(vectors)
 
-		self.cluster2id = defaultdict(list)
+		self.cluster2ids = defaultdict(list)
 		self.id2cluster = dict()
 		for post_index, label in enumerate(self.clustering.labels_):
-			self.cluster2id[label].append(post_index)
+			self.cluster2ids[label].append(post_index)
 			self.id2cluster[post_index] = label
 
 		print("- Clustered with {} clusters, with{} date".format(n_clusters, "" if add_date else "out"))
 
 	def get_cluster_keywords(self, cluster):
-		assert self.clustering and self.cluster2id and self.id2cluster, "Must cluster before!"
-		assert cluster in self.cluster2id, "Not a valid cluster number!"
+		assert self.clustering and self.cluster2ids and self.id2cluster, "Must cluster before!"
+		assert cluster in self.cluster2ids, "Not a valid cluster number!"
 		
 		cluster_vector = np.zeros(len(self.myDictionary.dictionary))
-		for post_index in self.cluster2id[cluster]:
+		for post_index in self.cluster2ids[cluster]:
 			cluster_vector += self.get_vector(post_index)
 
 		keywords = [(self.myDictionary.dictionary[i], v) for i, v in enumerate(cluster_vector)]
@@ -105,18 +105,30 @@ class MyTfidf:
 		return keywords
 
 class MyLda:
-	def __init__(self, myDictionary, num_topics=100):
+	def __init__(self, myDictionary, num_topics=100, topic_threshold=0.15):
 		self.num_topics = num_topics
+		self.topic_threshold = topic_threshold
 		self.myDictionary = myDictionary
 		self.model = LdaModel(self.myDictionary.doc2bows, \
 			id2word=self.myDictionary.dictionary, \
 			num_topics=num_topics)
+		self.topic2ids, self.id2topics = self.get_mappings()
 		self.coherenceModel = None
 		print("- Created MyLda with {} topics".format(self.num_topics))
 
-	def get_post_topics(self, post_index):
-		doc2bow = self.myDictionary.doc2bows[post_index]
-		return self.model.get_document_topics(doc2bow)
+	def get_mappings(self):
+		topic2ids, id2topics = defaultdict(list), defaultdict(list)
+		for i, doc2bow in enumerate(self.myDictionary.doc2bows):
+			topic_pairs = self.model.get_document_topics(doc2bow)
+			for j, (topic, prob) in enumerate(topic_pairs):
+				if prob >= self.topic_threshold or j == 0:
+					topic2ids[topic].append(i)
+					id2topics[i].append(topic)
+		return topic2ids, id2topics
+
+	def get_topic_terms(self, topic):
+		terms = self.model.get_topic_terms(topic)
+		return terms
 
 	def get_top_topic(self):
 		top_topics = self.model.top_topics(corpus=self.myDictionary.doc2bows)
@@ -138,8 +150,8 @@ class MyLda:
 if __name__  == '__main__':
 	# v1 = load_v1()
 
-	# v2 = load_v2()
-	# myDictionary = MyDictionary(v2, title_weight=1, use_comments=False)
+	v2 = load_v2()
+	myDictionary = MyDictionary(v2, title_weight=1, use_comments=False)
 
 	## DFs
 	# words = list(myDictionary.dictionary.items())
@@ -175,7 +187,17 @@ if __name__  == '__main__':
 	# for i, v in doc2bow:
 	# 	print(vector[i])
 
-	# myLda = MyLda(myDictionary)
+	myLda = MyLda(myDictionary)
+	for i in range(10000, 10010):
+		print("TITLE", v2[i].title)
+		print("BODY", v2[i].body)
+		topics = myLda.id2topics[i]
+		# topic_pairs.sort(key=lambda p: p[1], reverse=True)
+		for topic in topics:
+			word_pairs = myLda.model.get_topic_terms(topic)[:10]
+			strings = ["{}*{:0.03f}".format(myDictionary.dictionary[word_id], word_prob) for word_id, word_prob in word_pairs]
+			print(topic, " ".join(strings))
+		print("")
 	# top_topics, average = myLda.get_top_topic()
 	
 	# pprint(top_topics)
