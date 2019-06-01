@@ -38,9 +38,11 @@ class MyTfidf:
 	def __init__(self, myDictionary, smartirs='ntc'):
 		self.myDictionary = myDictionary
 		self.model = TfidfModel(self.myDictionary.doc2bows, smartirs=smartirs)
-		self.clustering = None
 		self.vectors = None
-		print("- Created MyTfidf")
+		self.clustering = None
+		self.cluster2id = None
+		self.id2cluster = None
+		print("- Created MyTfidf (smartirs={})".format(smartirs))
 
 	def get_doc2bow(self, index):
 		words = self.myDictionary.doc2bows[index]
@@ -66,8 +68,9 @@ class MyTfidf:
 		return vectors
 
 	def cluster(self, n_clusters, add_date=False, v1=None, min_value=0):
-		if self.clustering:
-			return self.clustering
+		if self.clustering and self.cluster2id and self.id2cluster \
+			and len(self.clustering.cluster_centers_) == n_clusters:
+			return
 		
 		vectors = self.get_vectors()
 
@@ -80,9 +83,26 @@ class MyTfidf:
 
 		self.clustering = MiniBatchKMeans(n_clusters=n_clusters)
 		self.clustering.fit(vectors)
-		self.clusters = defaultdict(list)
-		for document_index, label in enumerate(self.clustering.labels_):
-			self.clusters[label].append(document_index)
+
+		self.cluster2id = defaultdict(list)
+		self.id2cluster = dict()
+		for post_index, label in enumerate(self.clustering.labels_):
+			self.cluster2id[label].append(post_index)
+			self.id2cluster[post_index] = label
+
+		print("- Clustered with {} clusters, with{} date".format(n_clusters, "" if add_date else "out"))
+
+	def get_cluster_keywords(self, cluster):
+		assert self.clustering and self.cluster2id and self.id2cluster, "Must cluster before!"
+		assert cluster in self.cluster2id, "Not a valid cluster number!"
+		
+		cluster_vector = np.zeros(len(self.myDictionary.dictionary))
+		for post_index in self.cluster2id[cluster]:
+			cluster_vector += self.get_vector(post_index)
+
+		keywords = [(self.myDictionary.dictionary[i], v) for i, v in enumerate(cluster_vector)]
+		keywords.sort(key=lambda p: p[1], reverse=True)
+		return keywords
 
 class MyLda:
 	def __init__(self, myDictionary, num_topics=100):
@@ -94,8 +114,8 @@ class MyLda:
 		self.coherenceModel = None
 		print("- Created MyLda with {} topics".format(self.num_topics))
 
-	def get_document_topics(self, document_index):
-		doc2bow = self.myDictionary.doc2bows[document_index]
+	def get_post_topics(self, post_index):
+		doc2bow = self.myDictionary.doc2bows[post_index]
 		return self.model.get_document_topics(doc2bow)
 
 	def get_top_topic(self):
@@ -116,7 +136,7 @@ class MyLda:
 
 
 if __name__  == '__main__':
-	v1 = load_v1()
+	# v1 = load_v1()
 
 	# v2 = load_v2()
 	# myDictionary = MyDictionary(v2, title_weight=1, use_comments=False)
@@ -134,7 +154,7 @@ if __name__  == '__main__':
 	# myTfIdf = MyTfidf(myDictionary)
 	# vectors = myTfIdf.get_vectors()
 	# myTfIdf.cluster(100)
-	# clusters = sorted(myTfIdf.clusters.items(), key=lambda k: len(k[1]), reverse=True)
+	# clusters = sorted(myTfIdf.cluster2id.items(), key=lambda k: len(k[1]), reverse=True)
 	# for cluster in clusters[:20]:
 	# 	print("{} {}".format(cluster[0], len(cluster[1])))
 	# for i in clusters[40][1]:

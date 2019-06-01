@@ -2,6 +2,7 @@
 **/.DS_Store
 /venv
 /data/backup
+/models
 .ipynb_checkpoints/
 credentials.txt
 log.txt

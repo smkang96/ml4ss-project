@@ -7,17 +7,17 @@ from Components import Comment, Post, POSPost, POSComment
 def load_v1():
 	data_total = []
 	for i in range(6):
-		data = pickle.load(open("data/v1-{}".format(i), "rb"))
+		data = pickle.load(open("data/v1/v1-{}".format(i), "rb"))
 		data_total += data
-	print("- Loaded v1")
+	print("- Loaded v1: {}".format(len(data_total)))
 	return data_total
 
 def load_v2():
 	data_total = []
 	for i in range(6):
-		data = pickle.load(open("data/v2-{}".format(i), "rb"))
+		data = pickle.load(open("data/v2/v2-{}".format(i), "rb"))
 		data_total += data
-	print("- Loaded v2")
+	print("- Loaded v2: {}".format(len(data_total)))
 	return data_total
 
 def normalize_date(date, min_value=0):
