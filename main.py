@@ -140,6 +140,7 @@ def evaluate_tfidf(eval_sets):
 		results_all.append(pairs)
 
 	save_results(results_all, "results/tfidf.txt", eval_sets)
+	pickle.dump(results_all, open("results/tfidf.pkl", "wb+"))
 	print("(evaluate_tfidf) Finished evaluating")
 
 def evaluate_lda(eval_sets):
@@ -187,6 +188,7 @@ def evaluate_lda(eval_sets):
 		results_all.append(pairs)
 
 	save_results(results_all, "results/lda.txt", eval_sets)
+	pickle.dump(results_all, open("results/lda.pkl", "wb+"))
 	print("(evaluate_lda) Finished evaluating")
 
 if __name__ == '__main__':
