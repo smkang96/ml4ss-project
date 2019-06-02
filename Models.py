@@ -163,16 +163,16 @@ if __name__  == '__main__':
 	index = 10000
 		
 	## TFIDF
-	# myTfIdf = MyTfidf(myDictionary)
-	# vectors = myTfIdf.get_vectors()
-	# myTfIdf.cluster(100)
-	# clusters = sorted(myTfIdf.cluster2id.items(), key=lambda k: len(k[1]), reverse=True)
-	# for cluster in clusters[:20]:
-	# 	print("{} {}".format(cluster[0], len(cluster[1])))
-	# for i in clusters[40][1]:
-	# 	print(v2[i].title)
-	# 	print(v2[i].body)
-	# 	print("")
+	myTfIdf = MyTfidf(myDictionary)
+	vectors = myTfIdf.get_vectors()
+	myTfIdf.cluster(500)
+	clusters = sorted(myTfIdf.cluster2ids.items(), key=lambda k: len(k[1]), reverse=True)
+	for cluster in clusters[:20]:
+		print("{} {}".format(cluster[0], len(cluster[1])))
+	for i in clusters[40][1]:
+		print(v2[i].title)
+		print(v2[i].body)
+		print("")
 
 	# doc2bow = myTfIdf.get_doc2bow(index)
 	# doc2bow.sort(key=lambda p: p[1], reverse=True)
@@ -187,17 +187,16 @@ if __name__  == '__main__':
 	# for i, v in doc2bow:
 	# 	print(vector[i])
 
-	myLda = MyLda(myDictionary)
-	for i in range(10000, 10010):
-		print("TITLE", v2[i].title)
-		print("BODY", v2[i].body)
-		topics = myLda.id2topics[i]
-		# topic_pairs.sort(key=lambda p: p[1], reverse=True)
-		for topic in topics:
-			word_pairs = myLda.model.get_topic_terms(topic)[:10]
-			strings = ["{}*{:0.03f}".format(myDictionary.dictionary[word_id], word_prob) for word_id, word_prob in word_pairs]
-			print(topic, " ".join(strings))
-		print("")
+	# myLda = MyLda(myDictionary)
+	# for i in range(10000, 10010):
+	# 	print("TITLE", v2[i].title)
+	# 	print("BODY", v2[i].body)
+	# 	topics = myLda.id2topics[i]
+	# 	for topic in topics:
+	# 		word_pairs = myLda.model.get_topic_terms(topic)[:10]
+	# 		strings = ["{}*{:0.03f}".format(myDictionary.dictionary[word_id], word_prob) for word_id, word_prob in word_pairs]
+	# 		print(topic, " ".join(strings))
+	# 	print("")
 	# top_topics, average = myLda.get_top_topic()
 	
 	# pprint(top_topics)
