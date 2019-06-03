@@ -89,8 +89,9 @@ def evaluate(posts, ref_set):
     num_RnS = sum([x in ref_set for x in posts])
     precision = num_RnS / len(posts)
     recall = num_RnS / len(ref_set)
+    f1 = 2 * precision * recall / (precision + recall)
     # recall = num_RnS / len(list(ref_set))
-    return precision, recall
+    return precision, recall, f1
 
 ### Obsolete ###
 

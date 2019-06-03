@@ -80,12 +80,11 @@ def save_results(results_all, filename, eval_sets):
 			f.write("{}\n".format(CLUSTER_SIZES[i]))
 
 			for label, results in tuples:
-				max_p_and_r = []
+				max_tuples = []
 				for eval_label in eval_labels:
-					precisions, recalls, clusters = results[eval_label]
-					max_precision, max_recall = max(precisions), max(recalls)
-					max_p_and_r.append("{:0.04f}|{:0.04f}".format(max_precision, max_recall))
-				line = "{}|{}\n".format(label, "|".join(max_p_and_r))
+					precision, recall, f1, cluster = max(results[eval_label], key=lambda t: t[2])
+					max_tuples.append("{:0.04f}|{:0.04f}|{:0.04f}|{}".format(precision, recall, f1, cluster))
+				line = "{}|{}\n".format(label, "|".join(max_tuples))
 				f.write(line)
 
 def evaluate_tfidf(eval_sets):
@@ -93,15 +92,13 @@ def evaluate_tfidf(eval_sets):
 		results = dict()
 
 		for key, reference_set in eval_sets.items():
-			precisions, recalls, clusters = [], [], set()
+			tuples = []
 			for post in reference_set:
 				cluster = tfidf.id2cluster[post]
 				posts_in_cluster = tfidf.cluster2ids[cluster]
-				precision, recall = evaluate(posts_in_cluster, reference_set)
-				precisions.append(precision)
-				recalls.append(recall)
-				clusters.add(cluster)
-			results[key] = (precisions, recalls, clusters)
+				precision, recall, f1 = evaluate(posts_in_cluster, reference_set)
+				tuples.append((precision, recall, f1, cluster))
+			results[key] = tuples
 		return results
 
 	# Load models
@@ -148,19 +145,17 @@ def evaluate_lda(eval_sets):
 		results = dict()
 
 		for key, reference_set in eval_sets.items():
-			precisions, recalls, topics = [], [], set()
+			tuples = []
 			for post in reference_set:
 				candidate_topics = lda.id2topics[post]
-				this_precision, this_recall, this_topic = 0, 0, candidate_topics[0]
+				this_precision, this_recall, this_f1, this_topic = 0, 0, 0, candidate_topics[0]
 				for topic in candidate_topics:
 					posts_in_topic = lda.topic2ids[topic]
-					precision, recall = evaluate(posts_in_topic, reference_set)
-					if recall > this_recall:
-						this_precision, this_recall, this_topic = precision, recall, topic
-				precisions.append(this_precision)
-				recalls.append(this_recall)
-				topics.add(this_topic)
-			results[key] = (precisions, recalls, topics)
+					precision, recall, f1 = evaluate(posts_in_topic, reference_set)
+					if f1 > this_f1:
+						this_precision, this_recall, this_f1, this_topic = precision, recall, f1, topic
+				tuples.append((this_precision, this_recall, this_f1, this_topic))
+			results[key] = tuples
 		return results
 
 	# Load models
